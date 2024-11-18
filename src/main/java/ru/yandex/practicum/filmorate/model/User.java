@@ -23,6 +23,5 @@ public class User {
         this.email = email;
         this.login = login;
         this.birthday = birthday;
-        this.name = login;
     }
 }

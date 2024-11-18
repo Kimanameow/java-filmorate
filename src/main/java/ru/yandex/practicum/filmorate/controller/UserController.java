@@ -50,6 +50,9 @@ public class UserController {
         if (user.getLogin().isEmpty() || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
             throw new ValidateException("Некорректный логин.");
         }
+        if (user.getName().isBlank() || user.getName().isEmpty()) {
+            user.setName(user.getLogin());
+        }
         if (user.getBirthday().isAfter(LocalDate.now())) {
             throw new ValidateException("Некорректная дата рождения.");
         }

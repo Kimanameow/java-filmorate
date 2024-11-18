@@ -19,22 +19,23 @@ public class UserController {
 
 
     @PostMapping
-    public String addUser(@RequestBody User user) {
+    public User addUser(@RequestBody User user) {
         user.setId(id);
         id++;
         checkUser(user);
         users.put(user.getId(), user);
-        return "Приветсвуем, " + user.getName();
+        return user;
     }
 
-    @RequestMapping(value = "/id", method = RequestMethod.PUT)
-    public String changeUser(@RequestBody User user) {
+    @PutMapping
+    public User changeUser(@RequestBody User user) {
         if (users.containsKey(user.getId())) {
             users.remove(user.getId());
             checkUser(user);
             users.put(user.getId(), user);
-            return "Успешно";
-        } else return "Пользователь с таким id не найден.";
+            return user;
+        }
+        return user;
     }
 
     @GetMapping

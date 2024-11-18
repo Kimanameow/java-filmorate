@@ -16,22 +16,22 @@ public class FilmController {
     private static final LocalDate START_FILMS = LocalDate.of(1895, 12, 28);
 
     @PostMapping
-    public String addFilm(@RequestBody Film film) {
+    public Film addFilm(@RequestBody Film film) {
         film.setId(id);
         id++;
         validateNewFilm(film);
         films.put(film.getId(), film);
-        return "Фильм " + film.getName() + " успешно добавлен!";
+        return film;
     }
 
-    @RequestMapping(value = "/id", method = RequestMethod.PUT)
-    public String changeFilm(@RequestBody Film film) {
+    @PutMapping
+    public Film changeFilm(@RequestBody Film film) {
         if (films.containsKey(film.getId())) {
             films.remove(film.getId());
             validateNewFilm(film);
             films.put(film.getId(), film);
-            return "Успешно!";
-        } else return "Фильм с данным id не найден.";
+        }
+        return film;
     }
 
     @GetMapping

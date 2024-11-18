@@ -13,7 +13,7 @@ import java.util.HashMap;
 public class FilmController {
     private int id = 1;
     private HashMap<Integer, Film> films = new HashMap();
-    private final static LocalDate START_FILMS = LocalDate.of(1895, 12, 28);
+    private static final LocalDate START_FILMS = LocalDate.of(1895, 12, 28);
 
     @PostMapping
     public String addFilm(@RequestBody Film film) {

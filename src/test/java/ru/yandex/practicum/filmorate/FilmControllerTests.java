@@ -24,7 +24,7 @@ public class FilmControllerTests {
     }
 
     @Test
-    void emptyName(){
+    void emptyName() {
         Film film1 = new Film(" ", "Descr", LocalDate.now(), Duration.ofMinutes(20));
         assertThrows(ValidateException.class, () -> {
             fc.addFilm(film1);
@@ -32,7 +32,7 @@ public class FilmControllerTests {
     }
 
     @Test
-    void releaseDate(){
+    void releaseDate() {
         Film film1 = new Film("Name", "Des", LocalDate.of(1895, 12, 28), Duration.ofMinutes(20));
         fc.addFilm(film1);
         assertTrue(fc.allFilms().contains(film1));

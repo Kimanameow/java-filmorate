@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping(value = "/film")
+@RequestMapping(value = "/films")
 public class FilmController {
     private int id = 1;
     private HashMap<Integer, Film> films = new HashMap();

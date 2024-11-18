@@ -46,7 +46,7 @@ public class FilmController {
         if (film.getDescription().length() > 200) {
             throw new ValidateException("Максимальная длина строки - 200 символов.");
         }
-        if (film.getDuration().toMinutes() < 1) {
+        if (film.getDuration() < 1) {
             throw new ValidateException("Продолжительность не может быть отрицательной.");
         }
         if (film.getReleaseDate().isBefore(START_FILMS)) {

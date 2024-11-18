@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
 import ru.yandex.practicum.filmorate.model.User;
 
@@ -22,6 +23,9 @@ public class UserController {
     public User addUser(@RequestBody User user) {
         user.setId(id);
         id++;
+        if (user.getName().isEmpty() || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
         checkUser(user);
         users.put(user.getId(), user);
         return user;
@@ -34,8 +38,7 @@ public class UserController {
             checkUser(user);
             users.put(user.getId(), user);
             return user;
-        }
-        return user;
+        } else throw new NotFoundException("Пользователь не найден.");
     }
 
     @GetMapping
@@ -46,9 +49,6 @@ public class UserController {
     private void checkUser(User user) {
         if (user.getEmail().isEmpty() || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidateException("Некорректная электронная почта.");
-        }
-        if (user.getName().isEmpty() || user.getName().isBlank()) {
-            user.setName(user.getLogin());
         }
         if (user.getLogin().isEmpty() || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
             throw new ValidateException("Некорректный логин.");

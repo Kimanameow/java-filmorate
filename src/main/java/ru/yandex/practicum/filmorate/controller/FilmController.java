@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
 import ru.yandex.practicum.filmorate.model.Film;
 
@@ -30,8 +31,8 @@ public class FilmController {
             films.remove(film.getId());
             validateNewFilm(film);
             films.put(film.getId(), film);
-        }
-        return film;
+            return film;
+        } else throw new NotFoundException("Фильм не найден.");
     }
 
     @GetMapping

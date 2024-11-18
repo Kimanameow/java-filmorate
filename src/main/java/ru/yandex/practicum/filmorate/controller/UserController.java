@@ -23,9 +23,6 @@ public class UserController {
     public User addUser(@RequestBody User user) {
         user.setId(id);
         id++;
-        if (user.getName().isEmpty() || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
         checkUser(user);
         users.put(user.getId(), user);
         return user;

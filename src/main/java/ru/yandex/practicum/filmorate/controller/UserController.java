@@ -13,11 +13,9 @@ import java.util.HashMap;
 @RestController
 @Slf4j
 @RequestMapping(value = "/users")
-
 public class UserController {
     public HashMap<Integer, User> users = new HashMap();
     private int id = 1;
-
 
     @PostMapping
     public User addUser(@RequestBody User user) {
@@ -31,8 +29,20 @@ public class UserController {
     @PutMapping
     public User changeUser(@RequestBody User user) {
         if (users.containsKey(user.getId())) {
+            User oldUser = users.get(user.getId());
+            if (user.getName() == null) {
+                user.setName(oldUser.getName());
+            }
+            if (user.getLogin() == null) {
+                user.setLogin(oldUser.getLogin());
+            }
+            if (user.getEmail() == null) {
+                user.setEmail(oldUser.getEmail());
+            }
+            if (user.getBirthday() == null) {
+                user.setBirthday(oldUser.getBirthday());
+            }
             users.remove(user.getId());
-            checkUser(user);
             users.put(user.getId(), user);
             return user;
         } else throw new NotFoundException("Пользователь не найден.");
@@ -44,10 +54,10 @@ public class UserController {
     }
 
     private void checkUser(User user) {
-        if (user.getEmail().isEmpty() || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
+        if (user.getEmail() == null || user.getEmail().isEmpty() || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidateException("Некорректная электронная почта.");
         }
-        if (user.getLogin().isEmpty() || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
+        if (user.getLogin() == null || user.getLogin().isEmpty() || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
             throw new ValidateException("Некорректный логин.");
         }
         if (user.getName() == null || user.getName().isEmpty()) {
@@ -55,7 +65,7 @@ public class UserController {
         } else if (user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
+        if (user.getBirthday() == null || user.getBirthday().isAfter(LocalDate.now())) {
             throw new ValidateException("Некорректная дата рождения.");
         }
     }

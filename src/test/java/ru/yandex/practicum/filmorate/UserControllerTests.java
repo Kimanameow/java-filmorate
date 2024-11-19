@@ -50,8 +50,31 @@ public class UserControllerTests {
     void birthdayInFuture() {
         User user1 = new User("myemail@practicum.ru", "Itsme", "Name", LocalDate.now().plusMonths(20));
 
-        assertThrows(ValidateException.class, () -> {
-            us.addUser(user1);
-        });
+        assertThrows(ValidateException.class, () -> us.addUser(user1));
+    }
+
+    @Test
+    void spaceInLogin() {
+        User user1 = new User("myemail@practicum.ru", "Its me", "Name", LocalDate.now());
+
+        assertThrows(ValidateException.class, () -> us.addUser(user1));
+    }
+
+    @Test
+    void testChangingUserWithEmptyName() {
+        User user1 = new User("myemail@practicum.ru", "Itsme", "Name1", LocalDate.now());
+        User user2 = new User("myemail@practicum.ru", "Itsme1", null, LocalDate.now());
+        us.addUser(user1);
+        user2.setId(user1.getId());
+        us.changeUser(user2);
+
+        assertTrue(us.allUsers().contains(user2));
+        assertFalse(us.allUsers().contains(user1));
+        assertEquals(user2.getName(), user1.getName());
+    }
+
+    @Test
+    void correctlyAllUsers() {
+
     }
 }

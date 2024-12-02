@@ -1,17 +1,18 @@
 package ru.yandex.practicum.filmorate;
 
 import org.junit.jupiter.api.Test;
-import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FilmControllerTests {
-    FilmController fc = new FilmController();
+    FilmStorage fc = new InMemoryFilmStorage();
 
     @Test
     void durationZeroTest() {

@@ -57,6 +57,9 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public List<User> allUsers() {
+        if (users.isEmpty()) {
+            throw new NotFoundException("Нет пользователей");
+        }
         return users.values().stream().toList();
     }
 

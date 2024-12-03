@@ -40,10 +40,10 @@ public class UserService {
 
     public void deleteFriend(int id, int friendId) {
         checkUserInSystem(id, friendId);
+        validateFriends(id, friendId);
         if (id == friendId) {
             throw new FriendException("Нельзя удалить себя из друзей");
         }
-        validateFriends(id, friendId);
         if (!userAndHisFriend.get(id).contains(friendId)) {
             throw new FriendException(id + " не ваш друг");
         }

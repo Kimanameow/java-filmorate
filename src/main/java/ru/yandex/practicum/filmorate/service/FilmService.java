@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class FilmService {
@@ -47,21 +48,27 @@ public class FilmService {
     }
 
     public List<Film> findTenBestFilms(int count) {
-        Map<Integer, Integer> filmAndLikesCount = new HashMap<>();
-        for (Integer i : filmAndLikes.keySet()) {
-            filmAndLikesCount.put(i, filmAndLikes.get(i).size());
+        if (filmAndLikes.isEmpty()) {
+            throw new FilmException("Лайков пока нет");
         }
-        List<Map.Entry<Integer, Integer>> sortedFilms = new ArrayList<>(filmAndLikesCount.entrySet());
-        sortedFilms.sort((entry1, entry2) -> entry2.getValue().compareTo(entry1.getValue()));
-        List<Integer> topTenFilms = new ArrayList<>();
-        for (int i = 0; i < Math.min(count, sortedFilms.size()); i++) {
-            topTenFilms.add(sortedFilms.get(i).getKey());
+        int availableFilmsCount = filmAndLikes.size();
+        if (count > availableFilmsCount) {
+            count = availableFilmsCount;
         }
-        List<Film> films = new ArrayList<>();
-        for (Integer i : topTenFilms) {
-            films.add(filmStorage.allFilms().get(i));
-        }
-        return films;
+
+        Map<Integer, Long> filmAndLikesCount = filmAndLikes.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> (long) entry.getValue().size()));
+
+        List<Integer> topTenFilms = filmAndLikesCount.entrySet().stream()
+                .sorted(Map.Entry.<Integer, Long>comparingByValue().reversed())
+                .limit(count)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        return topTenFilms.stream()
+                .map(filmStorage.allFilms()::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     private void checkFilmAndUserInSystem(int idOfFilm, int idOfUser) {

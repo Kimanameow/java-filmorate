@@ -7,20 +7,15 @@ import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class UserService {
 
-    private final Map<Integer, List<Integer>> userAndHisFriend;
     private final InMemoryUserStorage userStorage;
 
     @Autowired
     public UserService(InMemoryUserStorage us) {
-        this.userAndHisFriend = new HashMap<>();
         this.userStorage = us;
     }
 
@@ -29,13 +24,7 @@ public class UserService {
         if (id == friendId) {
             throw new FriendException("Нельзя добавить себя в друзья");
         }
-        userAndHisFriend.putIfAbsent(id, new ArrayList<>());
-        userAndHisFriend.putIfAbsent(friendId, new ArrayList<>());
-        if (userAndHisFriend.get(id).contains(friendId)) {
-            throw new FriendException(id + " уже является вашим другом");
-        }
-        userAndHisFriend.get(id).add(friendId);
-        userAndHisFriend.get(friendId).add(id);
+        userStorage.allUsers().get(id).getFriends().add(friendId);
     }
 
     public void deleteFriend(int id, int friendId) {
@@ -44,18 +33,18 @@ public class UserService {
         if (id == friendId) {
             throw new FriendException("Нельзя удалить себя из друзей");
         }
-        if (!userAndHisFriend.get(id).contains(friendId)) {
+        if (!userStorage.allUsers().get(id).getFriends().contains(friendId)) {
             throw new FriendException(id + " не ваш друг");
         }
-        userAndHisFriend.get(id).remove((Integer) friendId);
-        userAndHisFriend.get(friendId).remove((Integer) id);
+        userStorage.allUsers().get(id).getFriends().remove(friendId);
+        userStorage.allUsers().get(friendId).getFriends().remove(id);
     }
 
     public List<User> generalFriends(int id, int friendId) {
         checkUserInSystem(id, friendId);
         validateFriends(id, friendId);
-        List<Integer> anotherUserFriends = userAndHisFriend.get(friendId);
-        List<Integer> yourFriends = userAndHisFriend.get(id);
+        Set<Integer> anotherUserFriends = userStorage.allUsers().get(id).getFriends();
+        Set<Integer> yourFriends = userStorage.allUsers().get(id).getFriends();
         if (yourFriends.isEmpty() || anotherUserFriends.isEmpty()) {
             throw new NotFoundException("Список друзей пуст");
         }
@@ -67,10 +56,10 @@ public class UserService {
     }
 
     private void validateFriends(int id, int friendId) {
-        if (!userAndHisFriend.containsKey(id)) {
+        if (!userStorage.allUsers().get(id).getFriends().contains(id)) {
             throw new FriendException("У вас нет друзей");
         }
-        if (!userAndHisFriend.containsKey(friendId)) {
+        if (!userStorage.allUsers().get(id).getFriends().contains(friendId)) {
             throw new FriendException("У " + friendId + " нет друзей");
         }
     }
@@ -83,13 +72,28 @@ public class UserService {
     }
 
     public List<User> getFriend(int id) {
-        if (userAndHisFriend.isEmpty() || !userAndHisFriend.containsKey(id)) {
+        if (userStorage.allUsers().get(id).getFriends().isEmpty() || !userStorage.allUsers().get(id).getFriends().contains(id)) {
             throw new NotFoundException("У пользователя нет друзей");
         }
         List<User> nameFriend = new ArrayList<>();
-        for (Integer i : userAndHisFriend.get((Integer) id).stream().toList()) {
+        for (Integer i : userStorage.allUsers().get(id).getFriends().stream().toList()) {
             nameFriend.add(userStorage.getUsers().get(i));
         }
         return nameFriend;
+    }
+
+    public User addUser(User user) {
+        return userStorage.addUser(user);
+    }
+
+    public Collection<User> allUsers() {
+        return userStorage.allUsers();
+    }
+
+    public User changeUser(User user) {
+        if (!userStorage.getUsers().containsKey(user.getId())) {
+            throw new NotFoundException("Пользователь не найден");
+        }
+        return userStorage.changeUser(user);
     }
 }

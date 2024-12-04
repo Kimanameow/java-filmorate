@@ -9,66 +9,45 @@ import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class FilmService {
 
-    private final Map<Integer, List<Integer>> filmAndLikes;
     private final InMemoryFilmStorage filmStorage;
     private final InMemoryUserStorage userStorage;
 
     @Autowired
     public FilmService(InMemoryFilmStorage filmStorage, InMemoryUserStorage userStorage) {
-        this.filmAndLikes = new HashMap<>();
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
     }
 
     public void addLike(int filmId, int idOfUser) {
         checkFilmAndUserInSystem(filmId, idOfUser);
-        filmAndLikes.putIfAbsent(filmId, new ArrayList<>());
-        if (filmAndLikes.get(filmId).contains(idOfUser)) {
-            throw new FilmException("Вы уже ставили лайк этому фильму");
-        } else {
-            filmAndLikes.get(filmId).add(idOfUser);
-        }
+        filmStorage.getFilms().get(filmId).getLikes().add(idOfUser);
     }
 
     public void deleteLike(int filmId, int idOfUser) {
         checkFilmAndUserInSystem(filmId, idOfUser);
-        if (!filmAndLikes.containsKey(filmId)) {
+        if (!filmStorage.getFilms().containsKey(filmId)) {
             throw new NotFoundException("Фильм не найден");
         }
-        if (filmAndLikes.get(filmId).contains(idOfUser)) {
-            filmAndLikes.get(filmId).remove((Integer) idOfUser);
+        if (filmStorage.getFilms().get(filmId).getLikes().contains(idOfUser)) {
+            filmStorage.getFilms().get(filmId).getLikes().remove(idOfUser);
         } else {
             throw new FilmException("Вы не ставили лайк этому фильму");
         }
     }
 
     public List<Film> findTenBestFilms(int count) {
-        if (filmAndLikes.isEmpty()) {
-            throw new FilmException("Лайков пока нет");
+        List<Film> bestFilms = new ArrayList<>();
+        List<Film> films = new ArrayList<>(filmStorage.getFilms().values());
+        films.sort((film1, film2) -> Integer.compare(film2.getLikes().size(), film1.getLikes().size()));
+        int limit = Math.min(count, films.size());
+        for (int i = 0; i < limit; i++) {
+            bestFilms.add(films.get(i));
         }
-        int availableFilmsCount = filmAndLikes.size();
-        if (count > availableFilmsCount) {
-            count = availableFilmsCount;
-        }
-
-        Map<Integer, Long> filmAndLikesCount = filmAndLikes.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> (long) entry.getValue().size()));
-
-        List<Integer> topTenFilms = filmAndLikesCount.entrySet().stream()
-                .sorted(Map.Entry.<Integer, Long>comparingByValue().reversed())
-                .limit(count)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-
-        return topTenFilms.stream()
-                .map(filmStorage.allFilms()::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        return bestFilms;
     }
 
     private void checkFilmAndUserInSystem(int idOfFilm, int idOfUser) {

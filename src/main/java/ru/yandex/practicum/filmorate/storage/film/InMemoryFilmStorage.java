@@ -50,11 +50,6 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public void removeFilm(int id) {
-
-    }
-
-    @Override
     public List<Film> allFilms() {
         return films.values().stream().toList();
     }

@@ -15,31 +15,26 @@ import java.util.List;
 @Slf4j
 @RequestMapping(value = "/users")
 public class UserController {
-    InMemoryUserStorage userStorage;
     UserService userService;
 
     @Autowired
-    private UserController(InMemoryUserStorage storage, UserService service) {
-        this.userStorage = storage;
+    private UserController(UserService service) {
         this.userService = service;
     }
 
     @PostMapping
     public User addUser(@RequestBody User user) {
-        return userStorage.addUser(user);
+        return userService.addUser(user);
     }
 
     @PutMapping
     public User changeUser(@RequestBody User user) {
-        if (!userStorage.getUsers().containsKey(user.getId())) {
-            throw new NotFoundException("Пользователь не найден");
-        }
-        return userStorage.changeUser(user);
+        return userService.changeUser(user);
     }
 
     @GetMapping
     public Collection<User> allUsers() {
-        return userStorage.allUsers();
+        return userService.allUsers();
     }
 
     @PutMapping("/{id}/friends/{friendId}")

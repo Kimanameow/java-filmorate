@@ -9,8 +9,6 @@ public interface FilmStorage {
 
     public Film addFilm(Film film);
 
-    public void removeFilm(int id);
-
     public List<Film> allFilms();
 
 }

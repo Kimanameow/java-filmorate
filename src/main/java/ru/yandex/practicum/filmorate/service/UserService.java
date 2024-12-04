@@ -43,15 +43,15 @@ public class UserService {
     public List<User> generalFriends(int id, int friendId) {
         checkUserInSystem(id, friendId);
         validateFriends(id, friendId);
-        Set<Integer> anotherUserFriends = userStorage.allUsers().get(friendId).getFriends();
-        Set<Integer> yourFriends = userStorage.allUsers().get(id).getFriends();
+        Set<Integer> anotherUserFriends = userStorage.allUsers().get((Integer) friendId).getFriends();
+        Set<Integer> yourFriends = userStorage.allUsers().get((Integer) id).getFriends();
         if (yourFriends.isEmpty() || anotherUserFriends.isEmpty()) {
             throw new NotFoundException("Список друзей пуст");
         }
         List<User> commonFriends = new ArrayList<>();
         for (Integer i : yourFriends) {
             if (anotherUserFriends.contains(i)) {
-                commonFriends.add(userStorage.getUsers().get(friendId));
+                commonFriends.add(userStorage.getUsers().get(i));
             }
         }
         return commonFriends;

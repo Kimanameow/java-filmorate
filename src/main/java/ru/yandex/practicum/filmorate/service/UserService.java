@@ -24,7 +24,7 @@ public class UserService {
         if (id == friendId) {
             throw new FriendException("Нельзя добавить себя в друзья");
         }
-        userStorage.allUsers().get(id).getFriends().add(friendId);
+        userStorage.getUsers().get(id).getFriends().add(friendId);
     }
 
     public void deleteFriend(int id, int friendId) {
@@ -33,11 +33,11 @@ public class UserService {
         if (id == friendId) {
             throw new FriendException("Нельзя удалить себя из друзей");
         }
-        if (!userStorage.allUsers().get(id).getFriends().contains(friendId)) {
+        if (!userStorage.getUsers().get(id).getFriends().contains(friendId)) {
             throw new FriendException(id + " не ваш друг");
         }
-        userStorage.allUsers().get(id).getFriends().remove(friendId);
-        userStorage.allUsers().get(friendId).getFriends().remove(id);
+        userStorage.getUsers().get(id).getFriends().remove(friendId);
+        userStorage.getUsers().get(friendId).getFriends().remove(id);
     }
 
     public List<User> generalFriends(int id, int friendId) {
@@ -74,7 +74,7 @@ public class UserService {
     }
 
     public List<User> getFriend(int id) {
-        if (userStorage.allUsers().get(id).getFriends().isEmpty() || !userStorage.allUsers().get(id).getFriends().contains(id)) {
+        if (userStorage.getUsers().get(id).getFriends().isEmpty() || !userStorage.getUsers().get(id).getFriends().contains(id)) {
             throw new NotFoundException("У пользователя нет друзей");
         }
         List<User> nameFriend = new ArrayList<>();

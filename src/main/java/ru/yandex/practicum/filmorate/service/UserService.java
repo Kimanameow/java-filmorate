@@ -78,7 +78,7 @@ public class UserService {
             throw new NotFoundException("У пользователя нет друзей");
         }
         List<User> nameFriend = new ArrayList<>();
-        for (Integer i : userStorage.allUsers().get(id).getFriends().stream().toList()) {
+        for (Integer i : userStorage.getUsers().get(id).getFriends().stream().toList()) {
             nameFriend.add(userStorage.getUsers().get(i));
         }
         return nameFriend;

@@ -74,7 +74,7 @@ public class UserService {
     }
 
     public List<User> getFriend(int id) {
-        if (userStorage.getUsers().get(id).getFriends().isEmpty() || !userStorage.getUsers().get(id).getFriends().contains(id)) {
+        if (userStorage.getUsers().get(id).getFriends().isEmpty()) {
             throw new NotFoundException("У пользователя нет друзей");
         }
         List<User> nameFriend = new ArrayList<>();

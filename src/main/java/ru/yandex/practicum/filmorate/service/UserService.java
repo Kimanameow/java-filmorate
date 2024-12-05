@@ -58,10 +58,10 @@ public class UserService {
     }
 
     private void validateFriends(int id, int friendId) {
-        if (!userStorage.allUsers().get(id).getFriends().contains(id)) {
+        if (!userStorage.allUsers().get(id).getFriends().isEmpty()) {
             throw new FriendException("У вас нет друзей");
         }
-        if (!userStorage.allUsers().get(id).getFriends().contains(friendId)) {
+        if (!userStorage.allUsers().get(friendId).getFriends().isEmpty()) {
             throw new FriendException("У " + friendId + " нет друзей");
         }
     }
@@ -74,7 +74,7 @@ public class UserService {
     }
 
     public List<User> getFriend(int id) {
-        if (userStorage.getUsers().get(id).getFriends().isEmpty()) {
+        if (userStorage.getUsers().isEmpty() || userStorage.getUsers().get(id).getFriends().isEmpty()) {
             throw new NotFoundException("У пользователя нет друзей");
         }
         List<User> nameFriend = new ArrayList<>();

@@ -25,6 +25,7 @@ public class UserService {
             throw new FriendException("Нельзя добавить себя в друзья");
         }
         userStorage.getUsers().get(id).getFriends().add(friendId);
+        userStorage.getUsers().get(friendId).getFriends().add(id);
     }
 
     public void deleteFriend(int id, int friendId) {
@@ -58,10 +59,10 @@ public class UserService {
     }
 
     private void validateFriends(int id, int friendId) {
-        if (!userStorage.allUsers().get(id).getFriends().isEmpty()) {
+        if (userStorage.allUsers().get(id).getFriends().isEmpty()) {
             throw new FriendException("У вас нет друзей");
         }
-        if (!userStorage.allUsers().get(friendId).getFriends().isEmpty()) {
+        if (userStorage.allUsers().get(friendId).getFriends().isEmpty()) {
             throw new FriendException("У " + friendId + " нет друзей");
         }
     }

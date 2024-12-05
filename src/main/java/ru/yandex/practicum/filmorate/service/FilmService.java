@@ -27,6 +27,18 @@ public class FilmService {
         filmStorage.getFilms().get(filmId).getLikes().add(idOfUser);
     }
 
+    public Collection<Film> allFilms() {
+        return filmStorage.allFilms();
+    }
+
+    public Film changeFilm(Film film) {
+        return filmStorage.changeFilm(film);
+    }
+
+    public Film addFilm(Film film) {
+        return filmStorage.addFilm(film);
+    }
+
     public void deleteLike(int filmId, int idOfUser) {
         checkFilmAndUserInSystem(filmId, idOfUser);
         if (!filmStorage.getFilms().containsKey(filmId)) {

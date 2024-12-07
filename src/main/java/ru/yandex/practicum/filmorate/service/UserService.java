@@ -30,15 +30,11 @@ public class UserService {
 
     public void deleteFriend(int id, int friendId) {
         checkUserInSystem(id, friendId);
-        validateFriends(id, friendId);
         if (id == friendId) {
             throw new FriendException("Нельзя удалить себя из друзей");
         }
-        if (!userStorage.getUsers().get(id).getFriends().contains(friendId)) {
-            throw new FriendException(id + " не ваш друг");
-        }
-        userStorage.getUsers().get(id).getFriends().remove(friendId);
-        userStorage.getUsers().get(friendId).getFriends().remove(id);
+        userStorage.getUsers().get(id).getFriends().remove((Integer) friendId);
+        userStorage.getUsers().get(friendId).getFriends().remove((Integer) id);
     }
 
     public List<User> generalFriends(int id, int friendId) {
@@ -59,10 +55,10 @@ public class UserService {
     }
 
     private void validateFriends(int id, int friendId) {
-        if (userStorage.allUsers().get(id).getFriends().isEmpty()) {
+        if (userStorage.getUsers().get(id).getFriends().isEmpty()) {
             throw new FriendException("У вас нет друзей");
         }
-        if (userStorage.allUsers().get(friendId).getFriends().isEmpty()) {
+        if (userStorage.getUsers().get(friendId).getFriends().isEmpty()) {
             throw new FriendException("У " + friendId + " нет друзей");
         }
     }
@@ -75,10 +71,13 @@ public class UserService {
     }
 
     public List<User> getFriend(int id) {
-        if (userStorage.getUsers().isEmpty() || userStorage.getUsers().get(id).getFriends().isEmpty()) {
-            throw new NotFoundException("У пользователя нет друзей");
-        }
         List<User> nameFriend = new ArrayList<>();
+        if (userStorage.getUsers() == null || userStorage.getUsers().get(id) == null) {
+            throw new NotFoundException("Пользователя не существует");
+        }
+        if (userStorage.getUsers().get(id).getFriends().isEmpty()) {
+            return nameFriend;
+        }
         for (Integer i : userStorage.getUsers().get(id).getFriends().stream().toList()) {
             nameFriend.add(userStorage.getUsers().get(i));
         }
@@ -94,7 +93,7 @@ public class UserService {
     }
 
     public User changeUser(User user) {
-        if (!userStorage.getUsers().containsKey(user.getId())) {
+        if (userStorage.getUsers().isEmpty() || !userStorage.getUsers().containsKey(user.getId())) {
             throw new NotFoundException("Пользователь не найден");
         }
         return userStorage.changeUser(user);

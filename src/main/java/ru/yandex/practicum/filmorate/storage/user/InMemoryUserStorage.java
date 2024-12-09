@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
-import lombok.Getter;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
@@ -13,7 +12,6 @@ import java.util.List;
 @Component
 public class InMemoryUserStorage implements UserStorage {
 
-    @Getter
     private final HashMap<Integer, User> users = new HashMap();
     private int id = 1;
 
@@ -50,7 +48,7 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public void deleteUser(int id) {
-        if (!users.isEmpty() && users.containsKey(id)) {
+        if (users.containsKey(id)) {
             users.remove(id);
         }
     }
@@ -61,6 +59,14 @@ public class InMemoryUserStorage implements UserStorage {
             throw new NotFoundException("Нет пользователей");
         }
         return users.values().stream().toList();
+    }
+
+    @Override
+    public User getUserById(int id) {
+        if (users.isEmpty() || !users.containsKey(id)) {
+            throw new NotFoundException("Пользователь не найден");
+        }
+        return users.get(id);
     }
 
     private void checkUser(User user) {

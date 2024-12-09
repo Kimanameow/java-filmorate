@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
-import lombok.Getter;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
@@ -14,7 +13,6 @@ import java.util.List;
 public class InMemoryFilmStorage implements FilmStorage {
 
     private int id = 1;
-    @Getter
     private final HashMap<Integer, Film> films = new HashMap();
     private static final LocalDate START_FILMS = LocalDate.of(1895, 12, 28);
 
@@ -52,6 +50,14 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public List<Film> allFilms() {
         return films.values().stream().toList();
+    }
+
+    @Override
+    public Film getFilmById(int id) {
+        if (!films.containsKey(id)) {
+            throw new NotFoundException("Фильм не найден");
+        }
+        return films.get(id);
     }
 
     private void validateNewFilm(Film film) {

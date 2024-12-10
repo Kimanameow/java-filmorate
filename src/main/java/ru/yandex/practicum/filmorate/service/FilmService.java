@@ -2,8 +2,6 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exceptions.FilmException;
-import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -19,9 +17,6 @@ public class FilmService {
     private final UserStorage userStorage;
 
     public void addLike(int filmId, int idOfUser) {
-        if (userStorage.getUserById(idOfUser) == null) {
-            throw new NotFoundException("Пользователь не найден");
-        }
         filmStorage.getFilmById(filmId).getLikes().add(idOfUser);
     }
 
@@ -38,14 +33,7 @@ public class FilmService {
     }
 
     public void deleteLike(int filmId, int idOfUser) {
-        if (userStorage.getUserById(idOfUser) == null) {
-            throw new NotFoundException("Пользователь не найден");
-        }
-        if (filmStorage.getFilmById(filmId).getLikes().contains(idOfUser)) {
-            filmStorage.getFilmById(filmId).getLikes().remove(idOfUser);
-        } else {
-            throw new FilmException("Вы не ставили лайк этому фильму");
-        }
+        filmStorage.getFilmById(filmId).deleteLike(idOfUser);
     }
 
     public List<Film> findBestFilms(int count) {

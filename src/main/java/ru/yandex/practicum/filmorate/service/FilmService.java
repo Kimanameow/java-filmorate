@@ -17,6 +17,7 @@ public class FilmService {
     private final UserStorage userStorage;
 
     public void addLike(int filmId, int idOfUser) {
+        userStorage.getUserById(idOfUser);
         filmStorage.getFilmById(filmId).getLikes().add(idOfUser);
     }
 

@@ -4,21 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.storage.film.like.LikeStorage;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class FilmService {
 
     private final FilmStorage filmStorage;
-    private final UserStorage userStorage;
+    private final LikeStorage likeStorage;
 
     public void addLike(int filmId, int idOfUser) {
-        userStorage.getUserById(idOfUser);
-        filmStorage.getFilmById(filmId).getLikes().add(idOfUser);
+        likeStorage.addLike(filmId, idOfUser);
     }
 
     public Collection<Film> allFilms() {
@@ -34,14 +32,14 @@ public class FilmService {
     }
 
     public void deleteLike(int filmId, int idOfUser) {
-        userStorage.getUserById(idOfUser);
-        filmStorage.getFilmById(filmId).deleteLike(idOfUser);
+        likeStorage.removeLike(filmId, idOfUser);
     }
 
     public List<Film> findBestFilms(int count) {
-        return filmStorage.allFilms().stream()
-                .sorted((film1, film2) -> Integer.compare(film2.getLikes().size(), film1.getLikes().size()))
-                .limit(count)
-                .collect(Collectors.toList());
+        return likeStorage.findBestFilms(count);
+    }
+
+    public Film getFilmById(int id) {
+        return filmStorage.getFilmById(id);
     }
 }

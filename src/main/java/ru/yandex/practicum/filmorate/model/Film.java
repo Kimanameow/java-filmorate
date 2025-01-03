@@ -1,7 +1,8 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.Builder;
 import lombok.Data;
-import ru.yandex.practicum.filmorate.exceptions.FilmException;
+import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -11,25 +12,29 @@ import java.util.Set;
  * Film.
  */
 @Data
+@Builder
 public class Film {
+
     private int id;
     private String name;
     private String description;
     private LocalDate releaseDate;
     private int duration;
-    private Set<Integer> likes;
+    private Mpa mpa;
+    private Set<Genre> genres = new HashSet<>();
 
-    public Film(String name, String description, LocalDate releaseDate, int duration) {
+    public Film(int id, String name, String description, LocalDate releaseDate, int duration, Mpa mpa, Set<Genre> genres) {
+        this.id = id;
         this.name = name;
         this.description = description;
         this.releaseDate = releaseDate;
         this.duration = duration;
-        this.likes = new HashSet<>();
+        this.mpa = mpa;
+        this.genres = genres;
     }
 
-    public void deleteLike(int idOfUser) {
-        if (likes.contains(idOfUser)) {
-            likes.remove((Integer) idOfUser);
-        } else throw new FilmException("Вы не ставили лайк этому фильму");
+
+    public Film() {
+
     }
 }

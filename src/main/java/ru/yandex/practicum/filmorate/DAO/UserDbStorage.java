@@ -1,49 +1,44 @@
 package ru.yandex.practicum.filmorate.DAO;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
-import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import javax.sql.DataSource;
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Component
 @Primary
+@RequiredArgsConstructor
 public class UserDbStorage implements UserStorage {
-    private final DataSource dataSource;
-
-    public UserDbStorage(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public User addUser(User user) {
         checkUser(user);
         String sql = "INSERT INTO \"user\" (login, email, name, birthday) VALUES (?, ?, ?, ?)";
-        try (Connection connection = DataSourceUtils.getConnection(dataSource);
-             PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, user.getLogin());
-            pstmt.setString(2, user.getEmail());
-            pstmt.setString(3, user.getName());
-            pstmt.setDate(4, Date.valueOf(user.getBirthday()));
-            pstmt.executeUpdate();
-
-            ResultSet generatedKeys = pstmt.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                user.setId(generatedKeys.getInt(1));
-            }
-            return user;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка при добавлении пользователя в базу данных.");
-        }
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(
+                connection -> {
+                    PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                    ps.setString(1, user.getLogin());
+                    ps.setString(2, user.getEmail());
+                    ps.setString(3, user.getName());
+                    ps.setDate(4, Date.valueOf(user.getBirthday()));
+                    return ps;
+                }, keyHolder);
+        user.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
+        return user;
     }
 
     @Override
@@ -52,48 +47,21 @@ public class UserDbStorage implements UserStorage {
             throw new NotFoundException("Пользователь не найден.");
         }
         String sql = "UPDATE \"user\" SET login = ?, email = ?, name = ?, birthday = ? WHERE id = ?";
-        try (Connection connection = DataSourceUtils.getConnection(dataSource);
-             PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, user.getLogin());
-            pstmt.setString(2, user.getEmail());
-            pstmt.setString(3, user.getName());
-            pstmt.setDate(4, Date.valueOf(user.getBirthday()));
-            pstmt.setInt(5, user.getId());
-            pstmt.executeUpdate();
-            return user;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new ValidateException("Ошибка при обновлении пользователя в базе данных.");
-        }
+        jdbcTemplate.update(sql, user.getLogin(), user.getEmail(), user.getName(), Date.valueOf(user.getBirthday()),
+                user.getId());
+        return user;
     }
 
     @Override
     public void deleteUser(int id) {
         String sql = "DELETE FROM \"user\" WHERE id = ?";
-        try (Connection connection = DataSourceUtils.getConnection(dataSource);
-             PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new ValidateException("Ошибка при удалении пользователя из базы данных.");
-        }
+        jdbcTemplate.update(sql, id);
     }
 
     @Override
     public List<User> allUsers() {
-        List<User> users = new ArrayList<>();
         String sql = "SELECT * FROM \"user\"";
-        try (Connection connection = DataSourceUtils.getConnection(dataSource);
-             Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                users.add(mapRowToUser(rs));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка при получении всех пользователей из базы данных.");
-        }
+        List<User> users = jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToUser(rs));
         if (users.isEmpty()) {
             throw new NotFoundException("Нет пользователей");
         }
@@ -103,21 +71,13 @@ public class UserDbStorage implements UserStorage {
     @Override
     public User findUserById(int id) {
         String sql = "SELECT * FROM \"user\" WHERE id = ?";
-        try (Connection connection = DataSourceUtils.getConnection(dataSource);
-             PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return mapRowToUser(rs);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка при получении пользователя из базы данных.");
-        }
-        throw new NotFoundException("Пользователь не найден");
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToUser(rs), id)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Пользователь с ID " + id + " не найден"));
     }
 
-    private User mapRowToUser(ResultSet rs) throws SQLException {
+    User mapRowToUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id"),
                 rs.getString("login"),
@@ -142,5 +102,11 @@ public class UserDbStorage implements UserStorage {
         if (user.getBirthday() == null || user.getBirthday().isAfter(LocalDate.now())) {
             throw new ValidateException("Некорректная дата рождения.");
         }
+    }
+
+    public boolean userExists(int userId) {
+        String sql = "SELECT COUNT(*) FROM \"user\" WHERE id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, new Object[]{userId}, Integer.class);
+        return Optional.ofNullable(count).orElse(0) > 0;
     }
 }

@@ -1,57 +1,48 @@
 package ru.yandex.practicum.filmorate.DAO;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.storage.film.genre.GenreStorage;
 
-import javax.sql.DataSource;
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
+@RequiredArgsConstructor
 public class GenreDbStorage implements GenreStorage {
-    private final DataSource dataSource;
-
-    @Autowired
-    public GenreDbStorage(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public Genre getGenreById(int id) {
         String sql = "SELECT id, name FROM genre WHERE id = ?";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, id);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                return new Genre(resultSet.getInt("id"), resultSet.getString("name"));
-            } else {
-                throw new NotFoundException("Жанр с ID " + id + " не найден");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка при получении жанра по ID: " + id, e);
-        }
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowGenre(rs), id).stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("Жанр не найден"));
     }
 
     @Override
     public List<Genre> getAllGenres() {
-        List<Genre> genres = new ArrayList<>();
         String sql = "SELECT id, name FROM genre";
-        try (Connection connection = dataSource.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
-            while (resultSet.next()) {
-                genres.add(new Genre(resultSet.getInt("id"), resultSet.getString("name")));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Ошибка при получении всех жанров", e);
-        }
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowGenre(rs));
+    }
+
+    public Set<Genre> getGenresForFilm(int filmId) {
+        Set<Genre> genres = new HashSet<>();
+        String sql = "SELECT g.id, g.name FROM film_genre fg JOIN genre g ON fg.genre_id = g.id WHERE fg.film_id = ?";
+        jdbcTemplate.query(sql, new Object[]{filmId}, (rs, rowNum) -> {
+            genres.add(new Genre(rs.getInt("id"), rs.getString("name")));
+            return null;
+        });
         return genres;
+    }
+
+    private Genre mapRowGenre(ResultSet rs) throws SQLException {
+        int id = rs.getInt("id");
+        String name = rs.getString("name");
+        return new Genre(id, name);
     }
 }

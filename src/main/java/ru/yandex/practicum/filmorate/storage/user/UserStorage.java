@@ -15,4 +15,6 @@ public interface UserStorage {
 
     User findUserById(int id);
 
+    boolean userExists(int userId);
+
 }

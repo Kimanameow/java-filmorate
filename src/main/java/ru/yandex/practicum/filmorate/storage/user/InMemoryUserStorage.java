@@ -69,6 +69,11 @@ public class InMemoryUserStorage implements UserStorage {
         return users.get(id);
     }
 
+    @Override
+    public boolean userExists(int userId) {
+        return false;
+    }
+
     private void checkUser(User user) {
         if (user.getEmail() == null || user.getEmail().isEmpty() || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
             throw new ValidateException("Некорректная электронная почта.");

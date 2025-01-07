@@ -1,6 +1,10 @@
 package ru.yandex.practicum.filmorate.DAO;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidateException;
@@ -11,22 +15,18 @@ import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import javax.sql.DataSource;
 import java.sql.*;
+import java.sql.Date;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Component
+@RequiredArgsConstructor
 public class FilmDbStorage implements FilmStorage {
 
-    private final DataSource dataSource;
+    private final JdbcTemplate jdbcTemplate;
     private static final LocalDate START_FILMS = LocalDate.of(1895, 12, 28);
-
-    @Autowired
-    public FilmDbStorage(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+    private final GenreDbStorage genreDbStorage;
+    private final DataSource dataSource;
 
     @Override
     public Film changeFilm(Film film) {
@@ -63,7 +63,7 @@ public class FilmDbStorage implements FilmStorage {
         } catch (SQLException e) {
             throw new RuntimeException("Ошибка при обновлении фильма: " + e.getMessage(), e);
         }
-        updateGenresForFilm(film.getId(), film.getGenres());
+        updateGenresForFilm(film.getGenres(), film.getId());
         return film;
     }
 
@@ -74,66 +74,72 @@ public class FilmDbStorage implements FilmStorage {
             throw new ValidateException("Рейтинг с ID " + film.getMpa().getId() + " не существует");
         }
         String sql = "INSERT INTO film (name, description, release_date, duration, rating_id) VALUES (?, ?, ?, ?, ?)";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            statement.setString(1, film.getName());
-            statement.setString(2, film.getDescription());
-            statement.setDate(3, Date.valueOf(film.getReleaseDate()));
-            statement.setInt(4, film.getDuration());
-            statement.setInt(5, film.getMpa().getId());
-            statement.executeUpdate();
-            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    film.setId(generatedKeys.getInt(1));
-                }
-            }
-            addGenresToFilm(film.getId(), film.getGenres());
-        } catch (SQLException e) {
-            throw new ValidateException("Ошибка при добавлении фильма: " + e.getMessage());
-        }
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, film.getName());
+            ps.setString(2, film.getDescription());
+            ps.setDate(3, Date.valueOf(film.getReleaseDate()));
+            ps.setInt(4, film.getDuration());
+            ps.setInt(5, film.getMpa().getId());
+            return ps;
+        }, keyHolder);
+        film.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
+        addGenresToFilm(film.getGenres(), film.getId());
         return film;
     }
 
     @Override
     public List<Film> allFilms() {
-        List<Film> films = new ArrayList<>();
         String sql = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
                 "       f.rating_id, r.name AS rating_name " +
                 "FROM film f " +
-                "LEFT JOIN rating r ON f.rating_id = r.id";
-        try (Connection connection = dataSource.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
-            while (resultSet.next()) {
-                films.add(mapRowToFilm(resultSet));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return films;
+                "LEFT JOIN rating r ON f.rating_id = r.id;";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToFilm(rs));
     }
 
     @Override
     public Film getFilmById(int id) {
         String sql = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
-                "       f.rating_id, r.name AS rating_name " +
+                "f.rating_id, r.name AS rating_name " +
                 "FROM film f " +
                 "LEFT JOIN rating r ON f.rating_id = r.id " +
                 "WHERE f.id = ?;";
-        try (Connection connection = dataSource.getConnection();
+        Film film1 = jdbcTemplate.query(sql, (rs, rowNum) -> mapRowToFilm(rs), id)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Фильм с ID " + id + " не найден"));
+        film1.setGenres(genreDbStorage.getGenresForFilm(id));
+        return film1;
+    }
+
+    @Override
+    public List<Film> findBestFilms(int count) {
+        List<Film> bestFilms = new ArrayList<>();
+        String sql = "SELECT f.*, COUNT(l.user_id) AS like_count " +
+                "FROM film f " +
+                "LEFT JOIN likes l ON f.id = l.film_id " +
+                "GROUP BY f.id " +
+                "ORDER BY like_count DESC " +
+                "LIMIT ?";
+        try (Connection connection = DataSourceUtils.getConnection(dataSource);
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, id);
+            statement.setInt(1, count);
             ResultSet resultSet = statement.executeQuery();
-            if (resultSet.next()) {
-                Film film = mapRowToFilm(resultSet);
-                film.setGenres(getGenresForFilm(film.getId()));
-                return film;
-            } else {
-                throw new NotFoundException("Фильм с ID " + id + " не найден");
+
+            while (resultSet.next()) {
+                Film film = new Film();
+                film.setId(resultSet.getInt("id"));
+                film.setName(resultSet.getString("name"));
+                film.setDescription(resultSet.getString("description"));
+                film.setReleaseDate(resultSet.getDate("release_date").toLocalDate());
+                film.setDuration(resultSet.getInt("duration"));
+                bestFilms.add(film);
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при получении фильма по ID: " + id, e);
+            e.printStackTrace();
         }
+        return bestFilms;
     }
 
     private Film mapRowToFilm(ResultSet rs) throws SQLException {
@@ -143,24 +149,7 @@ public class FilmDbStorage implements FilmStorage {
                 .releaseDate(rs.getDate("release_date").toLocalDate())
                 .duration(rs.getInt("duration"))
                 .mpa(new Mpa(rs.getInt("rating_id"), rs.getString("rating_name")))
-                .genres(getGenresForFilm(rs.getInt("id")))
                 .build();
-    }
-
-    private Set<Genre> getGenresForFilm(int filmId) {
-        Set<Genre> genres = new HashSet<>();
-        String sql = "SELECT g.id, g.name FROM film_genre fg JOIN genre g ON fg.genre_id = g.id WHERE fg.film_id = ?";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, filmId);
-            ResultSet resultSet = statement.executeQuery();
-            while (resultSet.next()) {
-                genres.add(new Genre(resultSet.getInt("id"), resultSet.getString("name")));
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при получении жанров для фильма с ID: " + filmId, e);
-        }
-        return genres;
     }
 
     private void validateNewFilm(Film film) {
@@ -178,76 +167,40 @@ public class FilmDbStorage implements FilmStorage {
         }
     }
 
-    private void updateGenresForFilm(int filmId, Set<Genre> genres) {
+    private void updateGenresForFilm(Set<Genre> genres, int filmId) {
         String deleteSql = "DELETE FROM film_genre WHERE film_id = ?";
-        String insertSql = "INSERT INTO film_genre (film_id, genre_id) VALUES (?, ?)";
-
-        try (Connection connection = dataSource.getConnection()) {
-            try (PreparedStatement deleteStatement = connection.prepareStatement(deleteSql)) {
-                deleteStatement.setInt(1, filmId);
-                deleteStatement.executeUpdate();
+        jdbcTemplate.update(deleteSql, filmId);
+        if (genres != null && !genres.isEmpty()) {
+            String insertSql = "INSERT INTO film_genre (film_id, genre_id) VALUES (?, ?)";
+            for (Genre genre : genres) {
+                jdbcTemplate.update(insertSql, filmId, genre.getId());
             }
-
-            try (PreparedStatement insertStatement = connection.prepareStatement(insertSql)) {
-                for (Genre genre : genres) {
-                    insertStatement.setInt(1, filmId);
-                    insertStatement.setInt(2, genre.getId());
-                    insertStatement.addBatch();
-                }
-                insertStatement.executeBatch();
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при обновлении жанров фильма: " + e.getMessage(), e);
         }
     }
 
-    private void addGenresToFilm(int filmId, Set<Genre> genres) {
+    private void addGenresToFilm(Set<Genre> genres, int filmId) {
         String sql = "INSERT INTO film_genre (film_id, genre_id) VALUES (?, ?)";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-
-            for (Genre genre : genres) {
-                if (!genreExists(genre.getId())) {
-                    throw new ValidateException("Жанр с ID " + genre.getId() + " не существует");
-                }
-                statement.setInt(1, filmId);
-                statement.setInt(2, genre.getId());
-                statement.addBatch();
+        for (Genre genre : genres) {
+            if (!genreExists(genre.getId())) {
+                throw new ValidateException("Жанр с ID " + genre.getId() + " не существует");
             }
-
-            statement.executeBatch();
-        } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при добавлении жанров к фильму: " + e.getMessage(), e);
         }
+        jdbcTemplate.batchUpdate(sql, genres, genres.size(),
+                (ps, genre) -> {
+                    ps.setInt(1, filmId);
+                    ps.setInt(2, genre.getId());
+                });
     }
 
     private boolean ratingExists(int ratingId) {
         String sql = "SELECT COUNT(*) FROM rating WHERE id = ?";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, ratingId);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                return resultSet.getInt(1) > 0;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
+        Integer count = jdbcTemplate.queryForObject(sql, new Object[]{ratingId}, Integer.class);
+        return count != null && count > 0;
     }
 
     private boolean genreExists(int genreId) {
         String sql = "SELECT COUNT(*) FROM genre WHERE id = ?";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setInt(1, genreId);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                return resultSet.getInt(1) > 0;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
+        Integer count = jdbcTemplate.queryForObject(sql, new Object[]{genreId}, Integer.class);
+        return count != null && count > 0;
     }
 }

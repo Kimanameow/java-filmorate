@@ -12,4 +12,6 @@ public interface FilmStorage {
     List<Film> allFilms();
 
     Film getFilmById(int id);
+
+    List<Film> findBestFilms(int count);
 }

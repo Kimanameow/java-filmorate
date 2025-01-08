@@ -9,4 +9,6 @@ public interface RatingStorage {
     Mpa getRatingById(int id);
 
     List<Mpa> getAllRatings();
+
+    boolean ratingExists(int ratingId);
 }

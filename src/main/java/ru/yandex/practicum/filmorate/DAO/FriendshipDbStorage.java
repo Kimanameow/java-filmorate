@@ -14,7 +14,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FriendshipDbStorage implements FriendshipStorage {
     private final JdbcTemplate jdbcTemplate;
-    private final UserDbStorage userStorage;
 
     @Override
     public void addFriend(int userId, int friendId) {

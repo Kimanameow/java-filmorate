@@ -37,4 +37,12 @@ public class RatingDbStorage implements RatingStorage {
         String name = rs.getString("name");
         return new Mpa(id, name);
     }
+
+
+    @Override
+    public boolean ratingExists(int ratingId) {
+        String sql = "SELECT COUNT(*) FROM rating WHERE id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, new Object[]{ratingId}, Integer.class);
+        return count != null && count > 0;
+    }
 }

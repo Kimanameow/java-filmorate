@@ -98,24 +98,14 @@ public class FilmDbStorage implements FilmStorage {
         if (count < 1) {
             throw new ValidateException("Счетчик меньше 1.");
         }
-        String filmLikesQuery = "SELECT film_id, COUNT(film_id) AS likes " +
-                "FROM likes " +
-                "GROUP BY film_id " +
-                "ORDER BY likes DESC " +
-                "LIMIT ?;";
-        List<Integer> filmIds = jdbcTemplate.query(filmLikesQuery, new Object[]{count}, (rs, rowNum) ->
-                rs.getInt("film_id"));
-        if (filmIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        String listFilmId = String.join(",", filmIds.stream().map(String::valueOf).toArray(String[]::new));
         String filmsQuery = "SELECT f.id, f.name, f.description, f.release_date, f.duration, " +
-                "       f.rating_id, r.name AS rating_name " +
+                "       f.rating_id, r.name AS rating_name, COUNT(l.user_id) AS likes_count " +
                 "FROM film f " +
                 "LEFT JOIN rating r ON f.rating_id = r.id " +
-                "WHERE f.id IN (" + listFilmId + ") " +
+                "LEFT JOIN likes l ON f.id = l.film_id " +
+                "GROUP BY f.id, f.name, f.description, f.release_date, f.duration, f.rating_id, r.name " +
+                "ORDER BY likes_count DESC " +
                 "LIMIT ?;";
-
         return jdbcTemplate.query(filmsQuery, new Object[]{count}, (rs, rowNum) -> mapRowToFilm(rs));
     }
 
